@@ -1,22 +1,20 @@
 pipeline {
     agent any
-    options {
-        skipDefaultCheckout()
-    }
     stages {
-        stage('Cleanup Workspace') {
+        stage('Pre-cleanup (Targeted)') {
             steps {
-                deleteDir()
+                script {
+                    try {
+                        bat 'rmdir /S /Q target || echo Target directory not found'
+                    } catch (Exception e) {
+                        echo "Pre-cleanup failed: ${e}"
+                    }
+                }
             }
         }
         stage('Checkout') {
             steps {
                 git 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git'
-            }
-        }
-        stage('Pre-clean') {
-            steps {
-                bat 'rmdir /S /Q target'
             }
         }
         stage('Build') {
@@ -47,6 +45,10 @@ pipeline {
         }
         failure {
             echo 'Build or Test Failed'
+            script {
+                echo 'Attempting final cleanup after failure...'
+                bat 'taskkill /f /im java.exe || echo No Java processes to kill'
+            }
         }
     }
 }
