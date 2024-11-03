@@ -1,54 +1,79 @@
 pipeline {
     agent any
+
+    options {
+        // Retries the pipeline on SCM checkout failures and applies a timeout
+        retry(3)
+        timeout(time: 1, unit: 'HOURS')
+    }
+
     stages {
-        stage('Pre-cleanup (Targeted)') {
+        stage('Prepare Workspace') {
+            steps {
+                script {
+                    // Clean the workspace at the start
+                    deleteDir()
+                    echo 'Workspace cleaned up successfully.'
+                }
+            }
+        }
+        
+        stage('Checkout Code') {
             steps {
                 script {
                     try {
-                        bat 'rmdir /S /Q target || echo Target directory not found'
+                        checkout([
+                            $class: 'GitSCM', 
+                            branches: [[name: '*/main']], // specify the branch name
+                            userRemoteConfigs: [[url: 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git']],
+                            extensions: [[$class: 'CleanBeforeCheckout']]
+                        ])
+                        echo 'Code checkout successful.'
                     } catch (Exception e) {
-                        echo "Pre-cleanup failed: ${e}"
+                        error("Failed to checkout code: ${e.message}")
                     }
                 }
             }
         }
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git'
-            }
-        }
+
         stage('Build') {
             steps {
                 script {
-                    def mvnHome = tool name: 'MAVEN_HOME', type: 'maven'
-                    bat "${mvnHome}\\bin\\mvn clean package"
+                    // Run Maven build command
+                    bat "mvn clean install"
+                    echo 'Build completed successfully.'
                 }
             }
         }
+        
         stage('Test') {
             steps {
                 script {
-                    def mvnHome = tool name: 'MAVEN_HOME', type: 'maven'
-                    bat "${mvnHome}\\bin\\mvn test"
+                    // Run Maven test command
+                    bat "mvn test"
+                    echo 'Tests executed successfully.'
                 }
             }
         }
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+    }
+
+    post {
+        always {
+            script {
+                // Clean up workspace after completion
+                echo 'Cleaning up workspace post-build.'
+                try {
+                    deleteDir()
+                } catch (Exception e) {
+                    echo "Failed to delete workspace: ${e.message}"
+                }
             }
         }
-    }
-    post {
         success {
-            echo 'Build and Test Succeeded'
+            echo 'Build and test stages completed successfully.'
         }
         failure {
-            echo 'Build or Test Failed'
-            script {
-                echo 'Attempting final cleanup after failure...'
-                bat 'taskkill /f /im java.exe || echo No Java processes to kill'
-            }
+            echo 'Build or Test failed. Check logs for details.'
         }
     }
 }
