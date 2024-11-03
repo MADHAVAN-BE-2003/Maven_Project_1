@@ -1,9 +1,22 @@
 pipeline {
     agent any
+    options {
+        skipDefaultCheckout()
+    }
     stages {
+        stage('Cleanup Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
         stage('Checkout') {
             steps {
                 git 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git'
+            }
+        }
+        stage('Pre-clean') {
+            steps {
+                bat 'rmdir /S /Q target'
             }
         }
         stage('Build') {
