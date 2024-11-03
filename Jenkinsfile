@@ -10,7 +10,7 @@ pipeline {
             steps {
                 script {
                     def mvnHome = tool name: 'MAVEN_HOME', type: 'maven'
-                    sh "${mvnHome}/bin/mvn clean package"
+                    bat "${mvnHome}\\bin\\mvn clean package"
                 }
             }
         }
@@ -18,7 +18,7 @@ pipeline {
             steps {
                 script {
                     def mvnHome = tool name: 'MAVEN_HOME', type: 'maven'
-                    sh "${mvnHome}/bin/mvn test"
+                    bat "${mvnHome}\\bin\\mvn test"
                 }
             }
         }
