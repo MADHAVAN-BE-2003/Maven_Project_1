@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     options {
-        // Retries the pipeline on SCM checkout failures and applies a timeout
         retry(3)
         timeout(time: 1, unit: 'HOURS')
     }
@@ -11,9 +10,12 @@ pipeline {
         stage('Prepare Workspace') {
             steps {
                 script {
-                    // Clean the workspace at the start
-                    deleteDir()
-                    echo 'Workspace cleaned up successfully.'
+                    try {
+                        deleteDir()
+                        echo 'Workspace cleaned successfully.'
+                    } catch (Exception e) {
+                        echo "Failed to clean workspace: ${e.message}"
+                    }
                 }
             }
         }
@@ -21,17 +23,13 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    try {
-                        checkout([
-                            $class: 'GitSCM', 
-                            branches: [[name: '*/main']], // specify the branch name
-                            userRemoteConfigs: [[url: 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git']],
-                            extensions: [[$class: 'CleanBeforeCheckout']]
-                        ])
-                        echo 'Code checkout successful.'
-                    } catch (Exception e) {
-                        error("Failed to checkout code: ${e.message}")
-                    }
+                    checkout([
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/main']],
+                        userRemoteConfigs: [[url: 'https://github.com/MADHAVAN-BE-2003/Maven_Project_1.git']],
+                        extensions: [[$class: 'CleanBeforeCheckout']]
+                    ])
+                    echo 'Code checkout successful.'
                 }
             }
         }
@@ -39,7 +37,6 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    // Run Maven build command
                     bat "mvn clean install"
                     echo 'Build completed successfully.'
                 }
@@ -49,7 +46,6 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Run Maven test command
                     bat "mvn test"
                     echo 'Tests executed successfully.'
                 }
@@ -60,12 +56,13 @@ pipeline {
     post {
         always {
             script {
-                // Clean up workspace after completion
                 echo 'Cleaning up workspace post-build.'
-                try {
-                    deleteDir()
-                } catch (Exception e) {
-                    echo "Failed to delete workspace: ${e.message}"
+                node {
+                    try {
+                        deleteDir()
+                    } catch (Exception e) {
+                        echo "Failed to delete workspace: ${e.message}"
+                    }
                 }
             }
         }
